@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mi semana de estudio</title>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        background: #f2f2f2;
+        padding: 20px;
+      }
+      .tablero {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .columna {
+        background: #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        width: 220px;
+      }
+      .columna h3 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+      }
+      .lista {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        min-height: 80px;
+      }
+      .lista li {
+        background: white;
+        padding: 10px;
+        margin-bottom: 6px;
+        border-radius: 6px;
+        cursor: default;
+      }
+      .asa {
+        cursor: grab;
+        color: #999;
+        margin-right: 8px;
+      }
+      .lista li.fantasma {
+        opacity: 0.4;
+        background: #c8e6c9;
+      }
+      .elegida {
+        box-shadow: 0 6px 14px rgba(93, 215, 89, 0.3);
+      }
+      .lista li.bloqueada {
+        background: #ffcdd2;
+        transition: background 0.2s;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Mi semana de estudio</h1>
+    <p id="mensaje"></p>
+    <div class="tablero">
+      <div class="columna">
+        <h3>Actividades</h3>
+        <ul class="lista" id="banco">
+          <li data-horas="2"><span class="asa">⠿</span> Repasar C++ (2 h)</li>
+          <li data-horas="1">
+            <span class="asa">⠿</span> Taller de frontend (1 h)
+          </li>
+          <li data-horas="1"><span class="asa">⠿</span> Leer de redes (1 h)</li>
+          <li data-horas="3">
+            <span class="asa">⠿</span> Proyecto final (3 h)
+          </li>
+          <li data-horas="1">
+            <span class="asa">⠿</span> Repasar conceptos SOLID (1 h)
+          </li>
+          <li data-horas="1">
+            <span class="asa">⠿</span> Aprender conceptos DRY (1 h)
+          </li>
+        </ul>
+      </div>
+      <div class="columna">
+        <h3>Lunes <span class="total"></span></h3>
+        <ul class="lista dia" id="lunes">
+          <li class="fija" data-horas="2">
+            <span class="asa">⠿</span> Clase de Redes LAN (2 h)
+          </li>
+        </ul>
+      </div>
+      <div class="columna">
+        <h3>Martes <span class="total"></span></h3>
+        <ul class="lista dia" id="martes"></ul>
+      </div>
+      <div class="columna">
+        <h3>Papelera</h3>
+        <ul class="lista" id="papelera" style="border: 2px dashed red"></ul>
+      </div>
+    </div>
+    <script>
+      const listas = document.querySelectorAll(".dia");
+      const dias = document.querySelectorAll(".dia");
+      const mensaje = document.getElementById("mensaje");
+
+      // Recorre cada día, suma sus horas y las escribe en el título
+      function actualizarHoras() {
+        dias.forEach((dia) => {
+          let horas = 0;
+          for (const actividad of dia.children) {
+            horas += Number(actividad.dataset.horas);
+          }
+          dia.parentElement.querySelector(".total").textContent =
+            `(${horas} h)`;
+        });
+      }
+
+      // 1. LOS DÍAS: se mueven entre sí, se reordenan y tienen clases fijas
+      listas.forEach((lista) => {
+        new Sortable(lista, {
+          group: "semana",
+          animation: 250,
+          ghostClass: "fantasma",
+          chosenClass: "elegida",
+          handle: ".asa",
+          filter: ".fija",
+
+          // Se ejecuta cuando intentan mover una clase fija
+          onFilter: (evt) => {
+            evt.item.classList.add("bloqueada");
+            setTimeout(() => {
+              evt.item.classList.remove("bloqueada");
+            }, 500);
+          },
+
+          // Se ejecuta cada vez que se suelta una actividad que salió de un día
+          onEnd: (evt) => {
+            console.log("Actividad:", evt.item.textContent);
+            console.log("De:", evt.from.id, "posición", evt.oldIndex);
+            console.log("A:", evt.to.id, "posición", evt.newIndex);
+            console.log("Horas:", evt.item.dataset.horas);
+            actualizarHoras();
+            if (evt.from !== evt.to) {
+              mensaje.textContent = `Actividad "${evt.item.textContent}" movida de ${evt.from.id} a ${evt.to.id}.`;
+            }
+          },
+        });
+      });
+
+      // 2. EL BANCO: se saca una copia, no recibe nada y no se reordena
+      new Sortable(document.getElementById("banco"), {
+        group: { name: "semana", pull: "clone", put: false },
+        sort: false,
+        animation: 250,
+        ghostClass: "fantasma",
+        chosenClass: "elegida",
+        handle: ".asa",
+        onEnd: (evt) => {
+          actualizarHoras();
+          if (evt.from !== evt.to) {
+            mensaje.textContent = `Actividad "${evt.item.textContent}" copiada a ${evt.to.id}.`;
+          }
+        },
+      });
+
+      // 3. LA PAPELERA: recibe actividades, no deja sacarlas y borra lo que cae
+      new Sortable(document.getElementById("papelera"), {
+        group: { name: "semana", pull: false, put: true },
+        onAdd: (evt) => {
+          evt.item.remove();
+          actualizarHoras();
+        },
+      });
+
+      // Para que los totales arranquen bien al cargar la página
+      actualizarHoras();
+    </script>
+  </body>
+</html>
